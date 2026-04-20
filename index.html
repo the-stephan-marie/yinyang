@@ -2,6 +2,25 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script>
+      (function () {
+        var path = location.pathname;
+        if (!path.endsWith("/")) {
+          var lastSeg = path.slice(path.lastIndexOf("/") + 1);
+          path =
+            lastSeg.indexOf(".") >= 0
+              ? path.slice(0, path.lastIndexOf("/") + 1)
+              : path + "/";
+        }
+        var href = location.origin + path;
+        if (!href.endsWith("/")) href += "/";
+        var b = document.createElement("base");
+        b.href = href;
+        var charset = document.querySelector("meta[charset]");
+        if (charset) document.head.insertBefore(b, charset.nextSibling);
+        else document.head.insertBefore(b, document.head.firstChild);
+      })();
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
