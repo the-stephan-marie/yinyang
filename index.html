@@ -139,10 +139,10 @@
     </div>
 
     <a-scene
-      mindar-image="imageTargetSrc: ./targets (1).mind; autoStart: false;"
+      mindar-image="imageTargetSrc: ./targets (1).mind; autoStart: false; uiScanning: false; uiLoading: false; uiError: false;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
-      renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; alpha: true; precision: mediump;"
+      renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; alpha: true;"
       embedded
     >
       <a-assets timeout="20000">
@@ -190,6 +190,8 @@
 
         let started = false;
         let hasFound = false;
+        let startTimeoutId = null;
+        let arReady = false;
 
         function setStatus(text, hint) {
           statusEl.textContent = text;
@@ -208,63 +210,120 @@
           overlay.classList.remove("hidden");
         }
 
-        function startAR() {
+        async function startAR() {
           if (started) return;
           started = true;
           showRetry(false);
-          setStatus("Starting camera…", "If you’re prompted, tap Allow to enable camera access.");
+          startBtn.disabled = true;
+          startBtn.textContent = "Starting…";
+          setStatus(
+            "Requesting camera access…",
+            "If you’re prompted, tap Allow. If you opened this inside Instagram/TikTok/etc, switch to Safari/Chrome."
+          );
 
-          const tryStart = () => {
+          const tryStart = async () => {
             try {
               const comp = sceneEl.components && sceneEl.components["mindar-image"];
               if (comp && typeof comp.start === "function") {
-                comp.start();
-                return;
+                await comp.start();
+                return true;
               }
               const sys = sceneEl.systems && sceneEl.systems["mindar-image-system"];
               if (sys && typeof sys.start === "function") {
-                sys.start();
-                return;
+                await sys.start();
+                return true;
               }
               throw new Error("MindAR start method not available yet.");
             } catch (e) {
-              started = false;
-              showRetry(true);
-              setStatus(
-                "Couldn’t start camera yet.",
-                "If this is iOS Safari, make sure the page is served over HTTPS and tap Enable camera again."
-              );
-              console.error(e);
+              throw e;
             }
           };
 
-          if (sceneEl.hasLoaded) {
-            tryStart();
-          } else {
-            sceneEl.addEventListener("loaded", tryStart, { once: true });
+          const fail = (e) => {
+            started = false;
+            arReady = false;
+            if (startTimeoutId) {
+              window.clearTimeout(startTimeoutId);
+              startTimeoutId = null;
+            }
+            startBtn.disabled = false;
+            startBtn.textContent = "Enable camera";
+            showRetry(true);
+            showOverlay();
+            setStatus(
+              "Camera didn’t start.",
+              "Check: camera permission is allowed for this site, you’re not in an in-app browser, and no other app is using the camera. Then tap Retry."
+            );
+            if (e) console.error(e);
+          };
+
+          if (startTimeoutId) window.clearTimeout(startTimeoutId);
+          startTimeoutId = window.setTimeout(() => {
+            if (!arReady) fail(new Error("Timed out waiting for arReady"));
+          }, 8000);
+
+          try {
+            if (sceneEl.hasLoaded) {
+              await tryStart();
+            } else {
+              await new Promise((resolve, reject) => {
+                sceneEl.addEventListener(
+                  "loaded",
+                  async () => {
+                    try {
+                      await tryStart();
+                      resolve();
+                    } catch (e) {
+                      reject(e);
+                    }
+                  },
+                  { once: true }
+                );
+              });
+            }
+          } catch (e) {
+            fail(e);
           }
         }
 
         startBtn.addEventListener("click", startAR);
         retryBtn.addEventListener("click", () => {
           started = false;
+          arReady = false;
           showOverlay();
           startAR();
         });
 
         // Scene lifecycle events
         sceneEl.addEventListener("arReady", () => {
+          arReady = true;
+          if (startTimeoutId) {
+            window.clearTimeout(startTimeoutId);
+            startTimeoutId = null;
+          }
+          startBtn.disabled = false;
+          startBtn.textContent = "Enable camera";
           setStatus("Scanning…", "Point your camera at the marker to reveal the sculpture.");
         });
 
         sceneEl.addEventListener("arError", (e) => {
           started = false;
+          arReady = false;
+          if (startTimeoutId) {
+            window.clearTimeout(startTimeoutId);
+            startTimeoutId = null;
+          }
+          startBtn.disabled = false;
+          startBtn.textContent = "Enable camera";
           showRetry(true);
           showOverlay();
           const msg =
             (e && e.detail && (e.detail.message || e.detail.error)) ||
             "Camera failed to start.";
-          setStatus("Camera unavailable.", "Check camera permissions, then tap Retry.");
+          setStatus(
+            "Camera unavailable.",
+            "If you denied permission, re-enable it in browser/site settings. Also avoid in-app browsers. Then tap Retry."
+          );
           console.error("MindAR arError:", msg, e);
         });
 
