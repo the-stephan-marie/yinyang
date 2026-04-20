@@ -114,10 +114,13 @@
         }
       }
 
-      /* Make sure the A-Frame canvas always fills the viewport on mobile */
+      /* Full-viewport scene (MindAR examples use non-embedded fullscreen) */
       a-scene {
         position: fixed !important;
         inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
       }
     </style>
   </head>
@@ -139,10 +142,9 @@
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiScanning: false; uiLoading: false; uiError: false;"
       color-space="sRGB"
-      vr-mode-ui="enabled: false"
+      xr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
       renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; alpha: true;"
-      embedded
     >
       <a-assets timeout="20000">
         <a-asset-item id="yinyangRockModel" src="./yinyang+rock.glb"></a-asset-item>
