@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>The Alchemist's Debt — WebAR</title>
+
+    <!-- A-Frame -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <!-- MindAR (image tracking) -->
+    <script src="https://unpkg.com/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+          "Apple Color Emoji", "Segoe UI Emoji";
+      }
+
+      /* Overlay UI */
+      #overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: radial-gradient(1200px 800px at 50% 20%, rgba(25, 18, 5, 0.72), rgba(0, 0, 0, 0.92));
+        color: rgba(255, 255, 255, 0.92);
+        z-index: 9999;
+        -webkit-backdrop-filter: blur(6px);
+        backdrop-filter: blur(6px);
+        text-align: center;
+      }
+
+      #overlay.hidden {
+        display: none;
+      }
+
+      .title {
+        font-size: 16px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 8px;
+      }
+
+      .status {
+        font-size: 18px;
+        line-height: 1.35;
+        max-width: 34ch;
+        margin: 0 0 16px;
+      }
+
+      .hint {
+        font-size: 13px;
+        opacity: 0.75;
+        line-height: 1.4;
+        max-width: 42ch;
+        margin: 0 0 18px;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        color: #121212;
+        background: linear-gradient(180deg, #f4d37a, #caa24a);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      button.secondary {
+        background: rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: none;
+      }
+
+      .spinner {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.14);
+        border-top-color: rgba(244, 211, 122, 0.95);
+        animation: spin 0.9s linear infinite;
+        margin: 0 0 16px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* Make sure the A-Frame canvas always fills the viewport on mobile */
+      a-scene {
+        position: fixed !important;
+        inset: 0 !important;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="overlay" role="status" aria-live="polite">
+      <div class="spinner" aria-hidden="true"></div>
+      <div class="title">The Alchemist's Debt</div>
+      <p id="status" class="status">Preparing camera…</p>
+      <p id="hint" class="hint">
+        Point your camera at the QR/image marker. If prompted, allow camera access.
+      </p>
+      <div class="row">
+        <button id="startBtn" type="button">Enable camera</button>
+        <button id="retryBtn" type="button" class="secondary" style="display: none">Retry</button>
+      </div>
+    </div>
+
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets (1).mind; autoStart: false;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+      renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true; alpha: true; precision: mediump;"
+      embedded
+    >
+      <a-assets timeout="20000">
+        <a-asset-item id="yinyangRockModel" src="./yinyang+rock.glb"></a-asset-item>
+      </a-assets>
+
+      <!-- Camera -->
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+      <!-- Lighting tuned for metallic/gold highlights -->
+      <a-entity light="type: ambient; intensity: 0.75; color: #fff3d6"></a-entity>
+      <a-entity
+        light="type: directional; intensity: 1.25; color: #ffffff; castShadow: false"
+        position="1.2 2.4 1.1"
+      ></a-entity>
+      <a-entity
+        light="type: directional; intensity: 0.45; color: #ffd38a; castShadow: false"
+        position="-1.8 1.4 0.2"
+      ></a-entity>
+
+      <!-- Anchor content to image target 0 -->
+      <a-entity id="targetRoot" mindar-image-target="targetIndex: 0">
+        <a-entity
+          id="sproutModel"
+          gltf-model="#yinyangRockModel"
+          position="0 0 0"
+          rotation="0 0 0"
+          scale="0 0 0"
+          animation__sprout="property: scale; from: 0 0 0; to: 1 1 1; dur: 3000; easing: easeOutCubic; autoplay: false; startEvents: startSprout;"
+        ></a-entity>
+      </a-entity>
+    </a-scene>
+
+    <script>
+      (function () {
+        const overlay = document.getElementById("overlay");
+        const statusEl = document.getElementById("status");
+        const hintEl = document.getElementById("hint");
+        const startBtn = document.getElementById("startBtn");
+        const retryBtn = document.getElementById("retryBtn");
+
+        const sceneEl = document.querySelector("a-scene");
+        const targetRoot = document.getElementById("targetRoot");
+        const sproutModel = document.getElementById("sproutModel");
+
+        let started = false;
+        let hasFound = false;
+
+        function setStatus(text, hint) {
+          statusEl.textContent = text;
+          if (typeof hint === "string") hintEl.textContent = hint;
+        }
+
+        function showRetry(show) {
+          retryBtn.style.display = show ? "inline-flex" : "none";
+        }
+
+        function hideOverlay() {
+          overlay.classList.add("hidden");
+        }
+
+        function showOverlay() {
+          overlay.classList.remove("hidden");
+        }
+
+        function startAR() {
+          if (started) return;
+          started = true;
+          showRetry(false);
+          setStatus("Starting camera…", "If you’re prompted, tap Allow to enable camera access.");
+
+          const tryStart = () => {
+            try {
+              const comp = sceneEl.components && sceneEl.components["mindar-image"];
+              if (comp && typeof comp.start === "function") {
+                comp.start();
+                return;
+              }
+              const sys = sceneEl.systems && sceneEl.systems["mindar-image-system"];
+              if (sys && typeof sys.start === "function") {
+                sys.start();
+                return;
+              }
+              throw new Error("MindAR start method not available yet.");
+            } catch (e) {
+              started = false;
+              showRetry(true);
+              setStatus(
+                "Couldn’t start camera yet.",
+                "If this is iOS Safari, make sure the page is served over HTTPS and tap Enable camera again."
+              );
+              console.error(e);
+            }
+          };
+
+          if (sceneEl.hasLoaded) {
+            tryStart();
+          } else {
+            sceneEl.addEventListener("loaded", tryStart, { once: true });
+          }
+        }
+
+        startBtn.addEventListener("click", startAR);
+        retryBtn.addEventListener("click", () => {
+          started = false;
+          showOverlay();
+          startAR();
+        });
+
+        // Scene lifecycle events
+        sceneEl.addEventListener("arReady", () => {
+          setStatus("Scanning…", "Point your camera at the marker to reveal the sculpture.");
+        });
+
+        sceneEl.addEventListener("arError", (e) => {
+          started = false;
+          showRetry(true);
+          showOverlay();
+          const msg =
+            (e && e.detail && (e.detail.message || e.detail.error)) ||
+            "Camera failed to start.";
+          setStatus("Camera unavailable.", "Check camera permissions, then tap Retry.");
+          console.error("MindAR arError:", msg, e);
+        });
+
+        // Marker events
+        targetRoot.addEventListener("targetFound", () => {
+          if (!hasFound) {
+            hasFound = true;
+            hideOverlay();
+            sproutModel.emit("startSprout");
+          } else {
+            hideOverlay();
+          }
+        });
+
+        targetRoot.addEventListener("targetLost", () => {
+          // Keep the model visible once revealed for a more “residency-installation” feel.
+          // If you prefer it to hide when lost, uncomment:
+          // showOverlay();
+        });
+
+        // Initial UI state
+        showOverlay();
+        setStatus("Ready to scan.", "Tap Enable camera, then point at the marker.");
+      })();
+    </script>
+  </body>
+</html>
